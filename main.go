@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
 )
 
@@ -18,16 +19,26 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 	})
 }
 
-func (cfg *apiConfig) metricsHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+func (cfg *apiConfig) handerMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	htmlTemplate, err := os.ReadFile("admin/metrics.html")
+	if err != nil {
+		log.Printf("Error reading admin template: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	hits := cfg.fileserverHits.Load()
+	htmlContent := fmt.Sprintf(string(htmlTemplate), hits)
+
 	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte("Hits: " + fmt.Sprintf("%d", cfg.fileserverHits.Load())))
+	_, err = w.Write([]byte(htmlContent))
 	if err != nil {
 		log.Printf("Error writing response: %v", err)
 	}
 }
 
-func (cfg *apiConfig) resetHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 	cfg.fileserverHits.Store(0)
 	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte("Metrics reset"))
@@ -55,9 +66,9 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filePathRoot)))))
-	mux.HandleFunc("GET /healthz", handlerReady)
-	mux.HandleFunc("GET /metrics", apiCfg.metricsHandler)
-	mux.HandleFunc("POST /reset", apiCfg.resetHandler)
+	mux.HandleFunc("GET /api/healthz", handlerReady)
+	mux.HandleFunc("POST /admin/reset", apiCfg.handlerReset)
+	mux.HandleFunc("GET /admin/metrics", apiCfg.handerMetrics)
 
 	server := &http.Server{
 		Addr:    ":" + port,
