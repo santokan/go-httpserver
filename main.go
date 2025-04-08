@@ -11,15 +11,6 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 }
 
-func handlerReady(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	_, err := w.Write([]byte("OK"))
-	if err != nil {
-		log.Printf("Error writing response: %v", err)
-	}
-}
-
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cfg.fileserverHits.Add(1)
@@ -45,6 +36,15 @@ func (cfg *apiConfig) resetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handlerReady(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write([]byte("OK"))
+	if err != nil {
+		log.Printf("Error writing response: %v", err)
+	}
+}
+
 func main() {
 	const (
 		filePathRoot = "."
@@ -55,9 +55,9 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filePathRoot)))))
-	mux.HandleFunc("/healthz", handlerReady)
-	mux.HandleFunc("/metrics", apiCfg.metricsHandler)
-	mux.HandleFunc("/reset", apiCfg.resetHandler)
+	mux.HandleFunc("GET /healthz", handlerReady)
+	mux.HandleFunc("GET /metrics", apiCfg.metricsHandler)
+	mux.HandleFunc("POST /reset", apiCfg.resetHandler)
 
 	server := &http.Server{
 		Addr:    ":" + port,
