@@ -1,0 +1,25 @@
+GET http://localhost:8080/app/
+
+###
+GET http://localhost:8080/admin/metrics
+
+###
+POST http://localhost:8080/admin/reset
+
+###
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "email": "mloneusk@example.co"
+}
+
+###
+POST http://localhost:8080/api/chirps
+Content-Type: application/json
+
+{
+  "body": "Hello, world!",
+  "user_id":"14916478-b168-429c-8d4a-2de2023ddb63"
+}
+
