@@ -26,4 +26,5 @@ Content-Type: application/json
 ###
 GET http://localhost:8080/api/chirps
 
-
+###
+GET http://localhost:8080/api/chirps/c54119d7-30d9-48f2-ada4-1370668afd75
