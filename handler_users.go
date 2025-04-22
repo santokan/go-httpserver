@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/santokan/go-httpserver/internal/auth"
+	"github.com/santokan/go-httpserver/internal/database"
 )
 
 type User struct {
@@ -17,7 +19,8 @@ type User struct {
 
 func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) {
 	type createUserRequest struct {
-		Email string `json:"email"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	if r.Method != http.MethodPost {
@@ -31,7 +34,23 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	user, err := cfg.db.CreateUser(r.Context(), params.Email)
+	if params.Password == "" || params.Email == "" {
+		respondWithError(w, http.StatusBadRequest, "Missing required fields", nil)
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to hash password", err)
+		return
+	}
+
+	dbParams := database.CreateUserParams{
+		Email:          params.Email,
+		HashedPassword: hashedPassword,
+	}
+
+	user, err := cfg.db.CreateUser(r.Context(), dbParams)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create user", err)
 		return

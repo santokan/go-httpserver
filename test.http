@@ -1,3 +1,4 @@
+###
 GET http://localhost:8080/app/
 
 ###
@@ -28,3 +29,21 @@ GET http://localhost:8080/api/chirps
 
 ###
 GET http://localhost:8080/api/chirps/c54119d7-30d9-48f2-ada4-1370668afd75
+
+###
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "email": "saul@bettercall.com",
+  "password": "123456"
+}
+
+###
+POST http://localhost:8080/api/login
+Content-Type: application/json
+
+{
+  "email": "saul@bettercall.com",
+  "password": "123456"
+}
