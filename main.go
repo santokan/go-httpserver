@@ -16,6 +16,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	platform       string
+	secret         string
 }
 
 func main() {
@@ -36,6 +37,8 @@ func main() {
 		log.Fatalf("Error opening database: %v", err)
 	}
 
+	secret := os.Getenv("SECRET")
+
 	const (
 		filePathRoot = "."
 		port         = "8080"
@@ -45,6 +48,7 @@ func main() {
 	apiCfg := &apiConfig{
 		db:       dbQueries,
 		platform: platform,
+		secret:   secret,
 	}
 
 	mux := http.NewServeMux()

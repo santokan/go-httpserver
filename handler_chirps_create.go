@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/santokan/go-httpserver/internal/auth"
 	"github.com/santokan/go-httpserver/internal/database"
 )
 
@@ -26,11 +27,22 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&req)
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't find JWT: ", err)
+		return
+	}
+
+	userID, err := auth.ValidateJWT(token, cfg.secret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Unable to validate JWT: ", err)
+		return
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload", err)
 		return
@@ -44,7 +56,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 
 	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   cleanedBody,
-		UserID: req.UserID,
+		UserID: userID,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create chirp", err)
