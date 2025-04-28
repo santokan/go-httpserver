@@ -6,18 +6,19 @@ import (
 	"time"
 
 	"github.com/santokan/go-httpserver/internal/auth"
+	"github.com/santokan/go-httpserver/internal/database"
 )
 
 type loginResponse struct {
 	User
-	Token string `json:"token"`
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type loginRequest struct {
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
 	if r.Method != http.MethodPost {
@@ -49,15 +50,25 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if params.ExpiresInSeconds <= 0 || params.ExpiresInSeconds > 3600 {
-		params.ExpiresInSeconds = 3600
-	}
-
-	expiration := time.Duration(params.ExpiresInSeconds) * time.Second
-
-	token, err := auth.MakeJWT(user.ID, cfg.secret, expiration)
+	token, err := auth.MakeJWT(user.ID, cfg.secret, time.Hour)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create token", err)
+		return
+	}
+
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to create refresh token", err)
+		return
+	}
+
+	createRefreshTokenParams := database.CreateTokenParams{
+		Token:  refreshToken,
+		UserID: user.ID,
+	}
+	_, err = cfg.db.CreateToken(r.Context(), createRefreshTokenParams)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to create refresh token", err)
 		return
 	}
 
@@ -68,7 +79,8 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 			UpdatedAt: user.UpdatedAt,
 			Email:     user.Email,
 		},
-		Token: token,
+		Token:        token,
+		RefreshToken: refreshToken,
 	}
 
 	respondWithJSON(w, http.StatusOK, response)
