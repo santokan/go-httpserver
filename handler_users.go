@@ -74,6 +74,13 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't find token: ", err)
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	params := updatePasswordRequest{}
 	if err := decoder.Decode(&params); err != nil {
@@ -83,12 +90,6 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 
 	if params.Password == "" || params.Email == "" {
 		respondWithError(w, http.StatusBadRequest, "Missing required fields", nil)
-		return
-	}
-
-	token, err := auth.GetBearerToken(r.Header)
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "Couldn't find token: ", err)
 		return
 	}
 
