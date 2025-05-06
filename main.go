@@ -17,6 +17,7 @@ type apiConfig struct {
 	db             *database.Queries
 	platform       string
 	secret         string
+	apiKey         string
 }
 
 func main() {
@@ -38,6 +39,7 @@ func main() {
 	}
 
 	secret := os.Getenv("SECRET")
+	apiKey := os.Getenv("POLKA_KEY")
 
 	const (
 		filePathRoot = "."
@@ -49,6 +51,7 @@ func main() {
 		db:       dbQueries,
 		platform: platform,
 		secret:   secret,
+		apiKey:   apiKey,
 	}
 
 	mux := http.NewServeMux()
@@ -65,6 +68,7 @@ func main() {
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.handlerDeleteChirp)
 	mux.HandleFunc("POST /api/refresh", apiCfg.handlerRefresh)
 	mux.HandleFunc("POST /api/revoke", apiCfg.handlerRevoke)
+	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.handlerWebhooks)
 
 	server := &http.Server{
 		Addr:    ":" + port,
