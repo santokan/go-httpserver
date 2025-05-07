@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/google/uuid"
 	"github.com/santokan/go-httpserver/internal/database"
@@ -12,6 +13,7 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 	var err error
 
 	authorIdStr := r.URL.Query().Get("author_id")
+	sortOrder := r.URL.Query().Get("sort")
 
 	if authorIdStr != "" {
 		var userUuid uuid.UUID
@@ -27,6 +29,14 @@ func (cfg *apiConfig) handlerGetAllChirps(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Unable to get chirps", err)
 		return
+	}
+
+	// Only need to handle descending order explicitly since the DB query
+	// already sorts in ascending order by default
+	if sortOrder == "desc" {
+		sort.Slice(dbChirps, func(i, j int) bool {
+			return dbChirps[i].CreatedAt.After(dbChirps[j].CreatedAt)
+		})
 	}
 
 	chirps := make([]Chirp, 0, len(dbChirps))
